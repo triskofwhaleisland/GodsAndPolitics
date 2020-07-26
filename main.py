@@ -245,4 +245,137 @@ def nextTurn(arg0_user):
             userID.used_manpower -= userID.soldiers * 0.15
             userID.soldiers *= 0.85
 
-    # Politics
+    ### Politics
+
+    # Stability and revolt risk
+
+    stab_tax_rate = userID.tax_rate * 100
+    stab_party_popularity = userID['politics'][userID.government]
+    if userID.government not in ['communism', 'fascism', 'dictatorship', 'monarchy']:
+        stab_government_modifier = 5
+    else:
+        stab_government_modifier = -5
+
+    userID.stability = math.ceil(stab_party_popularity + stab_government_modifier - math.ceil(stab_tax_rate))
+
+    if random.randint(0, 100) > userID.stability + 30 or userID.coup_this_turn:
+        userID.tax_rate = 0
+        new_government = governmentList[(governmentList.index(userID.government) + 1) % len(governmentList)]
+        setGovernment(userID, new_government)
+
+        nationalNews += f"The country of {userID.name} fell into a state of civil unrest, allowing supporters of " \
+                        f"{userID.government} to coup the government!\n Rioters then went on strike, leading the " \
+                        f"country of {userID.name} to lose all their actions!\n"
+        userID.coup_this_turn = False
+        userID.actions = 0
+
+    if userID.overthrow_this_turn:
+        userID.tax_rate = 0
+        new_government = governmentList[
+            (governmentList.index(userID.government) - 1 + len(governmentList) % len(governmentList))]
+        setGovernment(userID, new_government)
+
+        nationalNews += f"The country of {userID.name} fell into a state of civil unrest, leading supporters of " \
+                        f"{userID.government} to coup the government!\n Rioters then went on strike, leading the " \
+                        f"country of {userID.name} to lose all their actions!\n"
+        userID.overthrow_this_turn = False
+        userID.actions = 0
+
+    # Civilian Actions
+    userID.civilian_actions = math.ceil(userID.actions * userID.civilian_actions_percentage)
+
+    nationalNews += f"\nThe country of {userID.name} now has {userID.actions} actions, of which" \
+                    f"{(math.ceil(userID.civilian_actions * 0.5) + math.ceil(userID.civilian_actions * 0.5))}" \
+                    f"were automatically used by the populace."
+
+    mine(arg0_user, 'non', math.ceil(userID.civilian_actions * 0.5))
+    forage(arg0_user, 'non', math.ceil(userID.civilian_actions * 0.5))
+
+    news.append(nationalNews)
+
+
+def settle(arg0_user, arg1_msg, arg2_provs):
+    usr = main.users[arg0_user]
+    provs = arg2_provs
+    prov_checks = 0
+    has_unit = False
+    unit_type = ""
+
+    if len(arg2_provs) == 1:
+        if usr.military.settlers > 0:
+            has_unit = True
+            unit_type = 'settlers'
+            usr.soldiers -= 200_000
+            usr.used_manpower -= 200_000
+    elif len(arg2_provs) == 3:
+        if usr.military.settlers > 0:
+            has_unit = True
+            unit_type = 'colonists'
+            usr.soldiers -= 100_000
+            usr.used_manpower -= 100_000
+    elif len(arg2_provs) == 5:
+        if usr.military.settlers > 0:
+            has_unit = True
+            unit_type = 'administrators'
+            usr.soldiers -= 50_000
+            usr.used_manpower -= 50_000
+
+    if has_unit:
+        for i in range(len(arg2_provs)):
+            province_taken = False
+
+            for x in range(len(main.province_array)):
+                if main.province_array[x] == arg2_provs[i]:
+                    province_taken = True
+
+            if province_taken:
+                prov_checks -= 1
+            elif re.match('[a-zA-Z]', arg2_provs[i]) or int(arg2_provs[i]) > 849 or int(arg2_provs[i]) < 0:
+                prov_checks -= 1
+            else:
+                prov_checks += 1
+
+        if prov_checks == len(arg2_provs):
+            for i in range(len(arg2_provs)):
+                main.province_array.append(arg2_provs[i])
+                usr.provinces += 1
+            usr.military[unit_type] -= 1
+
+            arg1_msg.channel.send(f"Settlers from **{usr.name}** colonised the province(s) of {', '.join(arg2_provs)}."
+                                  f"They now have **{usr.provinces}** provinces. "
+                                  f"\n<@213287117017710593> EXPANSION ALERT!")
+        else:
+            arg1_msg.channel.send("One of the provinces you have specified turned out to be invalid!")
+    else:
+        arg1_msg.channel.send("You have specified an invalid amount of arguments!")
+
+    updateBuildings(usr)
+
+
+def disband(arg0_user, arg1_msg, arg2_unit, arg3_amount):
+    usr = main.users[arg0_user]
+    # "arquebusiers","musketmen","riflemen","infantry","modern_infantry","bombard","cannons","culverins",
+    # "field_artillery","howitzers","armoured_cars","tanks","biplanes","bombers","fighters","strategic_bombers",
+    # "galleons","men_of_war","ironclads","dreadnoughts","battleships","settlers","colonists","administrators"
+
+    manpower_costs = [50_000, 50_000, 50_000, 50_000, 50_000, 20_000, 20_000, 20_000, 20_000, 20_000, 25_000, 25_000,
+                      15_000, 15_000, 20_000, 20_000, 10_000, 20_000, 30_000, 50_000, 100_000, 100_000, 100_000, 50_000]
+    quantity = [50_000, 50_000, 50_000, 50_000, 50_000, 500, 500, 500, 500, 500, 500, 500, 50, 50, 50, 50, 10, 10, 10,
+                10, 10, 1, 1, 1]
+
+    unit_exists = False
+    unit_id = 0
+
+    for i in range(config.units.length):
+        if config.units[i] == arg2_unit:
+            unit_exists = True
+            unit_id = i
+
+    if unit_exists:
+        if usr['military'][arg2_unit] >= arg3_amount:
+            usr.soldiers -= math.ceil(manpower_costs[unit_id] / quantity[unit_id]) * arg3_amount
+            usr.used_manpower -= math.ceil(manpower_costs[unit_id] / quantity[unit_id]) * arg3_amount
+            usr['military'][arg2_unit] -= arg3_amount
+
+            arg1_msg.channel.send(f"{arg3_amount} {arg2_unit} were disbanded. You were refunded " + Math.ceil(
+                manpower_costs[unit_id] / quantity[unit_id]) * arg3_amount + " manpower.")
