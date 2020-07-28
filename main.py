@@ -379,3 +379,207 @@ def disband(arg0_user, arg1_msg, arg2_unit, arg3_amount):
 
             arg1_msg.channel.send(f"{arg3_amount} {arg2_unit} were disbanded. You were refunded " + Math.ceil(
                 manpower_costs[unit_id] / quantity[unit_id]) * arg3_amount + " manpower.")
+        else:
+            arg1_msg.channel.send(f"You don't have that many **{arg2_unit}**!");
+    else:
+        arg1_msg.channel.send("The type of unit that you have specified does not exist!");
+
+
+def demolish(arg0_user, arg1_msg, arg2_building, arg3_amount):
+    usr = main.users[arg0_user];
+    # "coal_mines", "gold_mines", "iron_mines", "lead_mines", "quarries", "farms", "lumberjacks", "refineries", "mines",
+    # "workshops", "watermills", "factories", "industrial_complexes", "barracks", "artillery_factories", "auto_plants",
+    # "aeroports", "dockyards"
+
+    manpower_costs = [20000, 50000, 20000, 20000, 20000, 25000, 10000, 50000, 20000, 50000, 40000, 50000, 70000, 20000,
+                      25000, 100000, 50000, 100000]
+
+    building_exists = False
+    building_id = 0
+
+    for i in range(len(config.buildings)):
+        if config.buildings[i] == arg2_building:
+            building_exists = True
+            building_id = i
+
+    if building_exists:
+        if usr["buildings"][arg2_building] >= arg3_amount:
+            usr.used_manpower -= manpower_costs[building_id] * arg3_amount
+            usr["buildings"][arg2_building] -= arg3_amount
+
+            arg1_msg.channel.send(f"{arg3_amount} {arg2_building} were demolished. You were refunded "
+                                  f"{manpower_costs[building_id] * arg3_amount} manpower, and {arg3_amount} "
+                                  f"building slots were freed up.")
+        else:
+            arg1_msg.channel.send(f"You don't have that many **{arg2_building}**!")
+    else:
+        arg1_msg.channel.send("The type of building that you have specified does not exist!")
+
+    updateBuildings(usr)
+
+
+def mine(arg0_user, arg1_msg, arg2_actions):
+    user_id = main.users[arg0_user]
+    inventory = main.users[arg0_user]['inventory']
+    mineable_materials = ["coal", "gold", "iron", "iron", "iron", "lead", "petrol", "stone", "stone"]
+
+    resource_list = []
+    out_of_actions = False
+
+    if arg2_actions < 1000:
+        for i in range(arg2_actions):
+            if user_id.actions > 0:
+                random_resource = random.choice(mineable_materials)
+                user_id.actions -= 1
+                inventory[random_resource] += 1
+                resource_list.append(random_resource)
+            else:
+                out_of_actions = True
+    else:
+        arg1_msg.channel.send("The number you have specified is too large!")
+
+    if arg1_msg != 'none':
+        arg1_msg.channel.send(f"You dug up {', '.join(resource_list)} whilst on your mining haul.")
+        if out_of_actions:
+            arg1_msg.channel.send("You then proceeded to run out of actions.")
+
+
+def forage(arg0_user, arg1_msg, arg2_actions):
+    user_id = main.users[arg0_user]
+    inventory = main.users[arg0_user]['inventory']
+
+    salvaged_wood = 0
+    out_of_actions = False
+
+    if arg2_actions <= 1000:
+        for i in range(arg2_actions):
+            if user_id.actions > 0:
+                user_id.actions -= 1
+                inventory['wood'] += 1
+                salvaged_wood += 1
+            else:
+                out_of_actions = True
+    else:
+        arg1_msg.channel.send("The number you have specified is too large!")
+
+    if arg1_msg != 'none':
+        arg1_msg.channel.send(f"You chopped {salvaged_wood} wood.")
+        if out_of_actions:
+            arg1_msg.channel.send("You then proceeded to run out of actions.")
+
+
+def buy(arg0_user, arg1_msg, arg2_amount, arg3_type):
+    if main.users[arg0_user] is not None:
+        user_id = main.users[arg0_user]
+        inventory = main.users[arg0_user]['inventory']
+        resource_list = [["coal", 1875], ["food", 2500], ["gold", 5000], ["iron", 3750], ["lead", 2000],
+                         ["petrol", 5000], ["stone", 2500], ["wood", 2500]]
+
+        resource_exists = False
+
+        for i in range(len(resource_list)):
+            f(arg3_type == resource_list[i][0])
+            resource_exists = True
+            if user_id.blockaded:
+                arg1_msg.channel.send("You can't buy items whilst blockaded!");
+            else:
+                if user_id.money <= arg2_amount * resource_list[i][1]:
+                    arg1_msg.channel.send(f"You don't have enough money to buy that much {resource_list[i][0]}!");
+                else:
+                    arg1_msg.channel.send(f"You bought {arg2_amount} {arg3_type} "
+                                          f"for M${arg2_amount * resource_list[i][1]}.");
+                    user_id.money -= arg2_amount * resource_list[i][1];
+                    inventory[arg3_type] += arg2_amount;
+
+        if not resource_exists and arg3_type != 'list':
+            arg1_msg.channel.send("That resource isn't for sale!");
+
+
+def sellGold(arg0_user, arg1_msg, arg2_actions):
+    if main.users[arg0_user] is not None:
+        user_id = main.users[arg0_user]
+        inventory = main.users[arg0_user]['inventory']
+        auction_list = []
+        out_of_gold = False
+
+        if arg2_actions <= 1000:
+            for i in range(arg2_actions):
+                if inventory.gold > 0:
+                    sold_for = random.randint(800, 1350)
+                    inventory.gold -= 1
+                    user_id.money += sold_for
+                    auction_list.append(f'M${sold_for}')
+                else:
+                    out_of_gold = True
+        else:
+            arg1_msg.channel.send('The number you have specified is too large!')
+
+        if not auction_list:  # auction list is empty: [] == False
+            arg1_msg.channel.send("You don't even have gold!")
+        else:
+            arg1_msg.channel.send(f"You sold {arg2_actions} gold for {auction_list} on the auction block.")
+            if out_of_gold:
+                arg1_msg.channel.send("You then proceeded to run out of gold.")
+    else:
+        arg1_msg.channel.send("You don't even have a country!")
+
+
+def sellPetrol(arg0_user, arg1_msg, arg2_actions):
+    if main.users[arg0_user] is not None:
+        user_id = main.users[arg0_user]
+        inventory = main.users[arg0_user]['inventory']
+        auction_list = []
+        out_of_petrol = False
+
+        if arg2_actions <= 1000:
+            for i in range(arg2_actions):
+                if inventory.petrol > 0:
+                    sold_for = random.randint(750, 1000)
+                    inventory.petrol -= 1
+                    user_id.money += sold_for
+                    auction_list.append(f'M${sold_for}')
+                else:
+                    out_of_petrol = True
+        else:
+            arg1_msg.channel.send('The number you have specified is too large!')
+
+        if not auction_list:  # auction list is empty: [] == False
+            arg1_msg.channel.send("You don't even have petrol!")
+        else:
+            arg1_msg.channel.send(f"You sold {arg2_actions} petrol for {', '.join(auction_list)} on the auction block.")
+            if out_of_petrol:
+                arg1_msg.channel.send("You then proceeded to run out of gold.")
+    else:
+        arg1_msg.channel.send("You don't even have a country!")
+
+
+def setGovernment(arg0_user, arg1_type):
+    user_id = arg0_user
+    user_id.government = arg1_type
+    user_id['politics'][arg1_type] = 100
+    if arg1_type == "absolute_monarchy":
+        user_id.manpower_percentage = 0.05;
+        user_id.max_tax = 0.65;
+        user_id.civilian_actions_percentage = 0.10;
+    elif arg1_type == "constitutional_monarchy":
+        user_id.manpower_percentage = 0.20;
+        user_id.max_tax = 0.35;
+        user_id.civilian_actions_percentage = 0.35;
+    elif arg1_type == "communism":
+        user_id.manpower_percentage = 0.50;
+        user_id.max_tax = 0.05;
+        user_id.civilian_actions_percentage = 0.00;
+    elif arg1_type == "democracy":
+        user_id.manpower_percentage = 0.25;
+        user_id.max_tax = 0.70;
+        user_id.civilian_actions_percentage = 0.50;
+    elif arg1_type == "fascism":
+        user_id.manpower_percentage = 0.10;
+        user_id.max_tax = 0.70;
+        user_id.civilian_actions_percentage = 0.20;
+
+### Command functions
+
+# randomElement => random.choice
+
+# initVar never used
