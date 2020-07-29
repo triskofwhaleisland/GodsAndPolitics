@@ -695,4 +695,86 @@ def initUser(arg0_user):
 
     if main['users'][current_user]['soldiers'] < 0: main['users'][current_user]['soldiers'] = 0
 
+
 ### Army & Combat functions
+
+
+def newArmy(arg0_user, arg1_msg, arg2_name):
+    msg = arg1_msg
+    name_exists = False
+
+    if arg0_user in main['users']:
+        if arg2_name != 'deleted_army':
+            usr = main['users'][arg0_user]
+            armies = main['users'][arg0_user]['armies']
+
+            for army in armies['army_array']:
+                if army == arg2_name:
+                    name_exists = True
+
+            if name_exists:
+                msg.channel.send("There already exists an army by this name!")
+            else:
+                # Create the army
+                armies['army_array'].append(arg2_name)
+                armies[arg2_name] = {}
+                armies[arg2_name]['name'] = arg2_name
+                for unit in config['units']:
+                    armies[arg2_name][unit] = 0
+        else:
+            msg.channel.send("Stop trying to cheese the system!")
+    else:
+        msg.channel.send("You don't have a country yet, you wannabe mercenary!")
+
+
+def editArmy(arg0_user, arg1_msg, arg2_name, arg3_amount, arg4_unit, arg5_mode):
+    msg = arg1_msg
+    army_exists = [False, '']
+
+    if arg0_user in main['users']:
+        usr = main['users'][arg0_user]
+        armies = main['users'][arg0_user]['armies']
+        reserves = main['users'][arg0_user]['military']
+
+        # Check if army exists (one match, not two like Vis's)
+
+        for army in armies['army_array']:
+            if army['name'].lower() == arg2_name.lower():
+                army_exists = [True, army]
+
+        # Add units
+        if army_exists[0] and army_exists[1] != 'deleted-army':
+            # check if unit exists
+            unit_exists = False
+            for unit in config['units']:
+                if unit == arg4_unit:
+                    unit_exists = True
+
+            if unit_exists:
+                # Check for mode
+                if arg5_mode == 'add':
+                    if arg3_amount > reserves[arg4_unit]:
+                        msg.channel.send("You don't have that many troops in reserve!")
+                    else:
+                        armies[army_exists[1]][arg4_unit] += arg3_amount
+                        reserves[arg4_unit] -= arg3_amount
+
+                        msg.channel.send(f"**{arg3_amount}** {arg4_unit} were deployed"
+                                         f"in the {armies[army_exists[1]]['name']}.")
+                elif arg5_mode == 'remove':
+                    if arg3_amount > armies[army_exists[1]][arg4_unit]:
+                        msg.channel.send(f"You don't have that many troops in {armies[army_exists[1]]['name']}!")
+                    else:
+                        armies[army_exists[1]][arg4_unit] -= arg3_amount
+                        reserves[arg4_unit] += arg3_amount
+
+                        msg.channel.send(f"You placed **{arg3_amount}** {arg4_unit}"
+                                         f"from the {armies[army_exists[1]]['name']} back into reserve.")
+                else:
+                    msg.channel.send(f'{arg5_mode} is not a valid operation!')
+            else:
+                msg.channel.send("The unit you have specified doesn't exist!")
+        else:
+            msg.channel.send("The army you have specified doesn't exist!")
+    else:
+        msg.channel.send("You don't have a country yet, you wannabe mercenary!")
