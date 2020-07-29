@@ -136,22 +136,22 @@ def returnMention(arg0):
         mentionID = ''
         nationFound = [False, '']
         userID = ''
-        for user in main.user_array:
-            print(main.users[user].name)
-            if main.users[user].name.lower().indexOf(arg0.lower()) != -1:
-                nationFound = [True, main.users[user].name]
-                mentionID = user
+        for usr in main['user_array']:
+            print(main['users'][usr]['name'])
+            if arg0.lower in main['users'][usr]['name'].lower():
+                nationFound = [True, main['users'][usr].name]
+                mentionID = usr
 
         if nationFound[0] and nationFound[1] != arg0:  # Loop back again to prioritize any exact matches
-            for user in main.user_array:
-                if main.users[user].name.lower() == arg0.lower():
-                    nationFound = [True, main.users[user].name]
-                    mentionID = user
+            for usr in main['user_array']:
+                if main['users'][usr]['name'].lower() == arg0.lower():
+                    nationFound = [True, main['users'][usr]['name']]
+                    mentionID = usr
 
         if not nationFound[0]:
-            user = client.users[client.users.find(arg0)]
-            if main.users[userID]:
-                userID = str(user.id)
+            usr = client.users[client.users.find(arg0)]
+            if main['users'][userID]:
+                userID = str(usr.id)
                 userExists = True
         else:
             return mentionID
@@ -178,10 +178,10 @@ def hasRole(arg0_msg, arg1_role):
 
 
 def nextTurn(arg0_user):
-    userID = main.users[arg0_user]
-    age = main.users[arg0_user].technology_level - 1
-    buildings = main.users[arg0_user]['buildings']
-    inventory = main.users[arg0_user]['inventory']
+    userID = main['users'][arg0_user]
+    age = main['users'][arg0_user].technology_level - 1
+    buildings = main['users'][arg0_user]['buildings']
+    inventory = main['users'][arg0_user]['inventory']
 
     # News variables:
 
@@ -198,8 +198,8 @@ def nextTurn(arg0_user):
     for i in range(buildings.workshops): userID.actions += random.randint(2, 3)  # Workshops (2-3 actions)
     for i in range(buildings.watermills): userID.actions += random.randint(3, 5)  # Watermills (3-5 actions)
     for i in range(buildings.factories): userID.actions += random.randint(5, 7)  # Factories (5-7 actions)
-    for i in range(buildings.industrial_complexes): userID.actions += random.randint(6,
-                                                                                     10)  # Industrial Complexes (6-10 actions)
+    for i in range(buildings.industrial_complexes): userID.actions += random.randint(6, 10)
+    # ^ Industrial Complexes (6-10 actions)
 
     # Raw resource production
 
@@ -227,7 +227,7 @@ def nextTurn(arg0_user):
         else:
             fatalities = math.ceil(userID.population * 0.065)  # 6.5% population penalty for inadequate food
         userID.population -= fatalities
-        nationalNews += f"\nA famine struck citizens of {user_id.name}, resulting in {fatalities} fatalities."
+        nationalNews += f"\nA famine struck citizens of {userID.name}, resulting in {fatalities} fatalities."
     else:
         userID.population = math.ceil(userID.population * userID.pop_growth_modifier)
         inventory.food -= math.ceil(userID.population / 1_000_000)
@@ -240,8 +240,8 @@ def nextTurn(arg0_user):
         nationalNews += f"\nTroops in the {userID.name} deserted en masse. Analysts estimate up to 15% of their armed " \
                         f"forces and even colonists may have quite simply dissipated. "
 
-        for i in range(len(config.units)):
-            userID['military'][config.units[i]] = math.ceil(userID['military'][config.units[i]] * 0.85)
+        for i in range(len(config['units'])):
+            userID['military'][config['units'][i]] = math.ceil(userID['military'][config['units'][i]] * 0.85)
             userID.used_manpower -= userID.soldiers * 0.15
             userID.soldiers *= 0.85
 
@@ -295,7 +295,7 @@ def nextTurn(arg0_user):
 
 
 def settle(arg0_user, arg1_msg, arg2_provs):
-    usr = main.users[arg0_user]
+    usr = main['users'][arg0_user]
     provs = arg2_provs
     prov_checks = 0
     has_unit = False
@@ -324,8 +324,8 @@ def settle(arg0_user, arg1_msg, arg2_provs):
         for i in range(len(arg2_provs)):
             province_taken = False
 
-            for x in range(len(main.province_array)):
-                if main.province_array[x] == arg2_provs[i]:
+            for x in range(len(main['province_array'])):
+                if main['province_array'][x] == arg2_provs[i]:
                     province_taken = True
 
             if province_taken:
@@ -337,7 +337,7 @@ def settle(arg0_user, arg1_msg, arg2_provs):
 
         if prov_checks == len(arg2_provs):
             for i in range(len(arg2_provs)):
-                main.province_array.append(arg2_provs[i])
+                main['province_array'].append(arg2_provs[i])
                 usr.provinces += 1
             usr.military[unit_type] -= 1
 
@@ -353,7 +353,7 @@ def settle(arg0_user, arg1_msg, arg2_provs):
 
 
 def disband(arg0_user, arg1_msg, arg2_unit, arg3_amount):
-    usr = main.users[arg0_user]
+    usr = main['users'][arg0_user]
     # "arquebusiers","musketmen","riflemen","infantry","modern_infantry","bombard","cannons","culverins",
     # "field_artillery","howitzers","armoured_cars","tanks","biplanes","bombers","fighters","strategic_bombers",
     # "galleons","men_of_war","ironclads","dreadnoughts","battleships","settlers","colonists","administrators"
@@ -366,8 +366,8 @@ def disband(arg0_user, arg1_msg, arg2_unit, arg3_amount):
     unit_exists = False
     unit_id = 0
 
-    for i in range(config.units.length):
-        if config.units[i] == arg2_unit:
+    for i in range(len(config['units'])):
+        if config['units'][i] == arg2_unit:
             unit_exists = True
             unit_id = i
 
@@ -377,16 +377,16 @@ def disband(arg0_user, arg1_msg, arg2_unit, arg3_amount):
             usr.used_manpower -= math.ceil(manpower_costs[unit_id] / quantity[unit_id]) * arg3_amount
             usr['military'][arg2_unit] -= arg3_amount
 
-            arg1_msg.channel.send(f"{arg3_amount} {arg2_unit} were disbanded. You were refunded " + Math.ceil(
+            arg1_msg.channel.send(f"{arg3_amount} {arg2_unit} were disbanded. You were refunded " + math.ceil(
                 manpower_costs[unit_id] / quantity[unit_id]) * arg3_amount + " manpower.")
         else:
-            arg1_msg.channel.send(f"You don't have that many **{arg2_unit}**!");
+            arg1_msg.channel.send(f"You don't have that many **{arg2_unit}**!")
     else:
-        arg1_msg.channel.send("The type of unit that you have specified does not exist!");
+        arg1_msg.channel.send("The type of unit that you have specified does not exist!")
 
 
 def demolish(arg0_user, arg1_msg, arg2_building, arg3_amount):
-    usr = main.users[arg0_user];
+    usr = main['users'][arg0_user]
     # "coal_mines", "gold_mines", "iron_mines", "lead_mines", "quarries", "farms", "lumberjacks", "refineries", "mines",
     # "workshops", "watermills", "factories", "industrial_complexes", "barracks", "artillery_factories", "auto_plants",
     # "aeroports", "dockyards"
@@ -397,8 +397,8 @@ def demolish(arg0_user, arg1_msg, arg2_building, arg3_amount):
     building_exists = False
     building_id = 0
 
-    for i in range(len(config.buildings)):
-        if config.buildings[i] == arg2_building:
+    for i in range(len(config['buildings'])):
+        if config['buildings'][i] == arg2_building:
             building_exists = True
             building_id = i
 
@@ -419,8 +419,8 @@ def demolish(arg0_user, arg1_msg, arg2_building, arg3_amount):
 
 
 def mine(arg0_user, arg1_msg, arg2_actions):
-    user_id = main.users[arg0_user]
-    inventory = main.users[arg0_user]['inventory']
+    user_id = main['users'][arg0_user]
+    inventory = main['users'][arg0_user]['inventory']
     mineable_materials = ["coal", "gold", "iron", "iron", "iron", "lead", "petrol", "stone", "stone"]
 
     resource_list = []
@@ -445,8 +445,8 @@ def mine(arg0_user, arg1_msg, arg2_actions):
 
 
 def forage(arg0_user, arg1_msg, arg2_actions):
-    user_id = main.users[arg0_user]
-    inventory = main.users[arg0_user]['inventory']
+    user_id = main['users'][arg0_user]
+    inventory = main['users'][arg0_user]['inventory']
 
     salvaged_wood = 0
     out_of_actions = False
@@ -469,36 +469,36 @@ def forage(arg0_user, arg1_msg, arg2_actions):
 
 
 def buy(arg0_user, arg1_msg, arg2_amount, arg3_type):
-    if main.users[arg0_user] is not None:
-        user_id = main.users[arg0_user]
-        inventory = main.users[arg0_user]['inventory']
+    if main['users'][arg0_user] is not None:
+        user_id = main['users'][arg0_user]
+        inventory = main['users'][arg0_user]['inventory']
         resource_list = [["coal", 1875], ["food", 2500], ["gold", 5000], ["iron", 3750], ["lead", 2000],
                          ["petrol", 5000], ["stone", 2500], ["wood", 2500]]
 
         resource_exists = False
 
         for i in range(len(resource_list)):
-            f(arg3_type == resource_list[i][0])
-            resource_exists = True
-            if user_id.blockaded:
-                arg1_msg.channel.send("You can't buy items whilst blockaded!");
-            else:
-                if user_id.money <= arg2_amount * resource_list[i][1]:
-                    arg1_msg.channel.send(f"You don't have enough money to buy that much {resource_list[i][0]}!");
+            if arg3_type == resource_list[i][0]:
+                resource_exists = True
+                if user_id.blockaded:
+                    arg1_msg.channel.send("You can't buy items whilst blockaded!")
                 else:
-                    arg1_msg.channel.send(f"You bought {arg2_amount} {arg3_type} "
-                                          f"for M${arg2_amount * resource_list[i][1]}.");
-                    user_id.money -= arg2_amount * resource_list[i][1];
-                    inventory[arg3_type] += arg2_amount;
+                    if user_id.money <= arg2_amount * resource_list[i][1]:
+                        arg1_msg.channel.send(f"You don't have enough money to buy that much {resource_list[i][0]}!")
+                    else:
+                        arg1_msg.channel.send(f"You bought {arg2_amount} {arg3_type} "
+                                              f"for M${arg2_amount * resource_list[i][1]}.")
+                        user_id.money -= arg2_amount * resource_list[i][1]
+                        inventory[arg3_type] += arg2_amount
 
         if not resource_exists and arg3_type != 'list':
-            arg1_msg.channel.send("That resource isn't for sale!");
+            arg1_msg.channel.send("That resource isn't for sale!")
 
 
 def sellGold(arg0_user, arg1_msg, arg2_actions):
-    if main.users[arg0_user] is not None:
-        user_id = main.users[arg0_user]
-        inventory = main.users[arg0_user]['inventory']
+    if main['users'][arg0_user] is not None:
+        user_id = main['users'][arg0_user]
+        inventory = main['users'][arg0_user]['inventory']
         auction_list = []
         out_of_gold = False
 
@@ -525,9 +525,9 @@ def sellGold(arg0_user, arg1_msg, arg2_actions):
 
 
 def sellPetrol(arg0_user, arg1_msg, arg2_actions):
-    if main.users[arg0_user] is not None:
-        user_id = main.users[arg0_user]
-        inventory = main.users[arg0_user]['inventory']
+    if main['users'][arg0_user] is not None:
+        user_id = main['users'][arg0_user]
+        inventory = main['users'][arg0_user]['inventory']
         auction_list = []
         out_of_petrol = False
 
@@ -558,28 +558,141 @@ def setGovernment(arg0_user, arg1_type):
     user_id.government = arg1_type
     user_id['politics'][arg1_type] = 100
     if arg1_type == "absolute_monarchy":
-        user_id.manpower_percentage = 0.05;
-        user_id.max_tax = 0.65;
-        user_id.civilian_actions_percentage = 0.10;
+        user_id.manpower_percentage = 0.05
+        user_id.max_tax = 0.65
+        user_id.civilian_actions_percentage = 0.10
     elif arg1_type == "constitutional_monarchy":
-        user_id.manpower_percentage = 0.20;
-        user_id.max_tax = 0.35;
-        user_id.civilian_actions_percentage = 0.35;
+        user_id.manpower_percentage = 0.20
+        user_id.max_tax = 0.35
+        user_id.civilian_actions_percentage = 0.35
     elif arg1_type == "communism":
-        user_id.manpower_percentage = 0.50;
-        user_id.max_tax = 0.05;
-        user_id.civilian_actions_percentage = 0.00;
+        user_id.manpower_percentage = 0.50
+        user_id.max_tax = 0.05
+        user_id.civilian_actions_percentage = 0.00
     elif arg1_type == "democracy":
-        user_id.manpower_percentage = 0.25;
-        user_id.max_tax = 0.70;
-        user_id.civilian_actions_percentage = 0.50;
+        user_id.manpower_percentage = 0.25
+        user_id.max_tax = 0.70
+        user_id.civilian_actions_percentage = 0.50
     elif arg1_type == "fascism":
-        user_id.manpower_percentage = 0.10;
-        user_id.max_tax = 0.70;
-        user_id.civilian_actions_percentage = 0.20;
+        user_id.manpower_percentage = 0.10
+        user_id.max_tax = 0.70
+        user_id.civilian_actions_percentage = 0.20
+
 
 ### Command functions
 
 # randomElement => random.choice
 
 # initVar never used
+
+
+def updateBuildings(arg0_user):
+    usr = arg0_user
+    total_buildings = 0
+
+    for i in range(len(config['buildings'])):
+        total_buildings += usr['buildings'][config['buildings'][i]]
+
+    usr.building_cap = usr.provinces * 5 + 10
+    usr.building_count = total_buildings
+
+
+def initUser(arg0_user):
+    current_user = str(arg0_user)
+    already_registered = False
+    for usr in main['user_array']:
+        if usr == current_user:
+            already_registered = True
+
+    # Customization
+
+    if current_user not in main['users']: main['users'][current_user] = {}
+    if 'name' not in main['users'][current_user]: main['users'][current_user]['name'] = ""
+    if 'government' not in main['users'][current_user]: main['users'][current_user]['government'] = ""
+    if 'technology_level' not in main['users'][current_user]: main['users'][current_user]['technology_level'] = 1
+    if 'population' not in main['users'][current_user]: main['users'][current_user]['population'] = 2_000_0000
+
+    if 'motto' not in main['users'][current_user]: main['users'][current_user]['motto'] = 'No motto set.'
+
+    if 'initial_manpower' not in main['users'][current_user]:
+        main['users'][current_user]['initial_manpower'] = 1_000_0000
+    if 'manpower_percentage' not in main['users'][current_user]: main['users'][arg0_user]['manpower_percentage'] = 0.50
+    if 'used_manpower' not in main['users'][current_user]: main['users'][current_user]['used_manpower'] = 0
+    if 'soldiers' not in main['users'][current_user]: main['users'][current_user]['soldiers'] = 0
+
+    if 'money' not in main['users'][current_user]: main['users'][current_user]['money'] = 10000
+    if 'stability' not in main['users'][current_user]: main['users'][current_user]['stability'] = 75
+    if 'coup_this_turn' not in main['users'][current_user]: main['users'][current_user]['coup_this_turn'] = False
+    if 'overthrow_this_turn' not in main['users'][current_user]:
+        main['users'][current_user]['overthrow_this_turn'] = False
+
+    if 'news_this_turn' not in main['users'][current_user]: main['users'][current_user]['news_this_turn'] = ""
+
+    # Modifiers
+    if 'tax_rate' not in main['users'][current_user]: main['users'][current_user]['tax_rate'] = 0
+    if 'max_tax' not in main['users'][current_user]: main['users'][current_user]['max_tax'] = 0
+    if 'pop_available' not in main['users'][current_user]: main['users'][current_user]['pop_available'] = 0.5
+
+    if 'production_buildings_modifier' not in main['users'][current_user]:
+        main['users'][current_user]['production_buildings_modifier'] = 1
+    if 'pop_growth_modifier' not in main['users'][current_user]: main['users'][current_user][
+        'pop_growth_modifier'] = 1.0539
+
+    if 'infamy' not in main['users'][current_user]: main['users'][current_user]['infamy'] = 0
+
+    # Building cap
+    if 'provinces' not in main['users'][current_user]: main['users'][current_user]['provinces'] = 0
+    if 'building_count' not in main['users'][current_user]: main['users'][current_user]['building_count'] = 0
+    if 'building_cap' not in main['users'][current_user]: main['users'][current_user]['building_cap'] = 10
+
+    # Sub-objects
+    if 'inventory' not in main['users'][current_user]: main['users'][current_user]["inventory"] = {}
+    if 'buildings' not in main['users'][current_user]: main['users'][current_user]["buildings"] = {}
+    if 'military' not in main['users'][current_user]: main['users'][current_user]["military"] = {}
+    if 'politics' not in main['users'][current_user]: main['users'][current_user]["politics"] = {}
+
+    # Crafting values
+    if 'actions' not in main['users'][current_user]: main['users'][current_user]['actions'] = 10
+    if 'civilian_actions' not in main['users'][current_user]: main['users'][current_user]['civilian_actions'] = 0
+    if 'civilian_actions_percentage' not in main['users'][current_user]:
+        main['users'][current_user]['civilian_actions_percentage'] = 0
+
+    # Modifiers - only staff can set these
+    if 'blockaded' not in main['users'][current_user]: main['users'][current_user].blockaded = False
+
+    # Add all materials to inventory
+    for material in config['materials']:
+        if material not in main['users'][current_user]["inventory"]: main['users'][current_user]["inventory"][
+            material] = 0
+
+    # Add all political parties
+    for government in governmentList:
+        if government not in main['users'][current_user]["politics"]: main['users'][current_user]["politics"][
+            government] = 0
+
+    # Add all military units
+    for unit in config['units']:
+        if unit not in main['users'][current_user]["military"]: main['users'][current_user]["military"][unit] = 0
+
+    if 'armies' not in main['users'][current_user]: main['users'][current_user]["armies"] = {}
+    if 'army_array' not in main['users'][current_user]["armies"]: main['users'][current_user]["armies"][
+        'army_array'] = []
+
+    if 'last_election' not in main['users'][current_user]: main['users'][current_user].last_election = 0
+
+    if not already_registered:
+        main['user_array'].append(current_user)
+        main['users'][current_user]['technology_level'] = 1
+        main['users'][current_user]["inventory"]['food'] = 100
+        main['users'][current_user]["buildings"]['workshops'] = 1
+        main['users'][current_user]["military"]['settlers'] = 1
+
+    # "Temp logic" (idk what that means, probably wrinkles out weird bugs
+    if main['users'][current_user]['used_manpower'] < 0:
+        main['users'][current_user]['used_manpower'] = 0
+    elif main['users'][current_user]['used_manpower'] > main['users'][current_user]['manpower']:
+        main['users'][current_user]['used_manpower'] = main['users'][current_user]['manpower']
+
+    if main['users'][current_user]['soldiers'] < 0: main['users'][current_user]['soldiers'] = 0
+
+### Army & Combat functions
