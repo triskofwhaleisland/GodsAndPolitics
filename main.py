@@ -103,7 +103,7 @@ building_list = []
 news = []
 
 
-### Framework
+##### Framework
 
 # Operating Functions
 
@@ -170,7 +170,7 @@ def returnChannel(arg0):
 
 
 def parseMilliseconds(duration):
-    return datetime.datetime(duration * 1000)
+    return datetime.datetime(second=duration / 1000)
 
 
 def hasRole(arg0_msg, arg1_role):
@@ -729,7 +729,7 @@ def newArmy(arg0_user, arg1_msg, arg2_name):
 
 def editArmy(arg0_user, arg1_msg, arg2_name, arg3_amount, arg4_unit, arg5_mode):
     msg = arg1_msg
-    army_exists = [False, '']
+    army = ''
 
     if arg0_user in main['users']:
         usr = main['users'][arg0_user]
@@ -738,12 +738,12 @@ def editArmy(arg0_user, arg1_msg, arg2_name, arg3_amount, arg4_unit, arg5_mode):
 
         # Check if army exists (one match, not two like Vis's)
 
-        for army in armies['army_array']:
-            if army['name'].lower() == arg2_name.lower():
-                army_exists = [True, army]
+        for knownArmy in armies['army_array']:
+            if knownArmy['name'].lower() == arg2_name.lower():
+                army = knownArmy
 
         # Add units
-        if army_exists[0] and army_exists[1] != 'deleted-army':
+        if army != 'deleted-army':
             # check if unit exists
             unit_exists = False
             for unit in config['units']:
@@ -756,20 +756,20 @@ def editArmy(arg0_user, arg1_msg, arg2_name, arg3_amount, arg4_unit, arg5_mode):
                     if arg3_amount > reserves[arg4_unit]:
                         msg.channel.send("You don't have that many troops in reserve!")
                     else:
-                        armies[army_exists[1]][arg4_unit] += arg3_amount
+                        armies[army][arg4_unit] += arg3_amount
                         reserves[arg4_unit] -= arg3_amount
 
                         msg.channel.send(f"**{arg3_amount}** {arg4_unit} were deployed"
-                                         f"in the {armies[army_exists[1]]['name']}.")
+                                         f"in the {armies[army]['name']}.")
                 elif arg5_mode == 'remove':
-                    if arg3_amount > armies[army_exists[1]][arg4_unit]:
-                        msg.channel.send(f"You don't have that many troops in {armies[army_exists[1]]['name']}!")
+                    if arg3_amount > armies[army][arg4_unit]:
+                        msg.channel.send(f"You don't have that many troops in {armies[army]['name']}!")
                     else:
-                        armies[army_exists[1]][arg4_unit] -= arg3_amount
+                        armies[army][arg4_unit] -= arg3_amount
                         reserves[arg4_unit] += arg3_amount
 
                         msg.channel.send(f"You placed **{arg3_amount}** {arg4_unit}"
-                                         f"from the {armies[army_exists[1]]['name']} back into reserve.")
+                                         f"from the {armies[army]['name']} back into reserve.")
                 else:
                     msg.channel.send(f'{arg5_mode} is not a valid operation!')
             else:
@@ -778,3 +778,81 @@ def editArmy(arg0_user, arg1_msg, arg2_name, arg3_amount, arg4_unit, arg5_mode):
             msg.channel.send("The army you have specified doesn't exist!")
     else:
         msg.channel.send("You don't have a country yet, you wannabe mercenary!")
+
+
+def renameArmy(arg0_user, arg1_msg: discord.Message, arg2_name: str, arg3_newname):
+    msg = arg1_msg
+    if arg0_user in main['users']:
+        usr = main['users'][arg0_user]
+        armies = main['users'][arg0_user]['armies']
+        army = ''
+        for knownArmy in armies['army_array']:
+            if armies[knownArmy]['name'].lower() == arg2_name.lower():
+                army = knownArmy
+                break
+        if army:
+            old_name = armies[army]['name']
+            armies[army]['name'] = arg3_newname
+            msg.channel.send(f"You have updated the name of the {old_name} to the **{arg3_newname}**!")
+        else:
+            msg.channel.send("The army you have specified is nonexistent!")
+    else:
+        msg.channel.send("You're stateless!")
+
+
+def deleteArmy(arg0_user, arg1_msg: discord.Message, arg2_name):
+    msg = arg1_msg
+
+    if arg0_user in main['users']:
+        usr = main['users'][arg0_user]
+        armies = main['users'][arg0_user]['armies']
+        army = ''
+        for knownArmy in armies['army_array']:
+            if armies[knownArmy]['name'].lower() == arg2_name.lower():
+                army = knownArmy
+                break
+
+        if army != 'deleted-army':
+            old_name = armies[army]['name']
+            for unit in config['units']:
+                usr['military'][unit] += armies[army][unit]
+                armies[army][unit] = 0
+
+            armies[army]['name'] = 'deleted-army'
+            msg.channel.send(f"You have demobilised the **{old_name}**! They have now been returned to the reserves.")
+        else:
+            msg.channel.send("The army you have specified is nonexistent!")
+    else:
+        msg.channel.send("You're currently stateless!")
+
+
+def printArmy(arg0_user, arg1_msg, arg2_name):
+    msg = arg1_msg
+
+    if arg0_user in main['users']:
+        usr = main['users'][arg0_user]
+        armies = main['users'][arg0_user]['armies']
+        army = ''
+        for knownArmy in armies['army_array']:
+            if armies[knownArmy]['name'].lower() == arg2_name.lower():
+                army = knownArmy
+                break
+
+        if army != 'deleted-army':
+            ap_units = [1, 2, 5, 6, 10, 1000, 1500, 2500, 10000, 15000, 3000, 10000, 2000, 5000, 1000, 25000, 1000,
+                        2500, 7000, 10000, 20000, 0, 0, 0]
+            dp_units = [1, 2, 5, 8, 10, 300, 300, 500, 200, 500, 6000, 20000, 2000, 1000, 10000, 5000, 1000, 2500, 5000,
+                        20000, 10000, 0, 0, 0]
+
+            ap = sum([armies[army][config['ground_units'][i]] * ap_units[i] for i in range(len(config['units']))])
+            dp = sum([armies[army][config['ground_units'][i]] * dp_units[i] for i in range(len(config['units']))])
+
+            military_string = [f":bust_in_silhouette: User: {arg0_user.name}",
+                               f":map: Country: {main['users'][arg0_user].name}",
+                               f"------------------ \n:crossed_swords: **{armies[army]['name']}**:",
+                               "------------------",
+                               ]
+            military_string.extend(
+                [f":guard: **{config['ground_units'][i]}**: {armies[army][config['ground_units'][i]]}"
+                 for i in range(len(config['ground_units'])) if armies[army][config['ground_units'][i]] > 0]
+            )
